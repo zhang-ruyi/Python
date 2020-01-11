@@ -13,15 +13,23 @@ class DownLoad_M3U8(object):
     file_name : str
     m3u8_url_prefix = ''
     ts_list = []
+    m3u8_root = ''
 
     def __post_init__(self):
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 '
                           '(KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36', }
         self.threadpool = ThreadPoolExecutor(max_workers=20)
+        #prefix
         pos = self.m3u8_url.rfind('/') + 1
         self.m3u8_url_prefix = self.m3u8_url[:pos]
-        print("prefix = ", self.m3u8_url_prefix)
+
+        #root
+        pos = self.m3u8_url.find('/',self.m3u8_url.find('//') + 2) + 1
+        self.m3u8_root = self.m3u8_url[:pos]
+        print("prefix = ", self.m3u8_url_prefix ,'root = ', self.m3u8_root)
+
+        #output
         if not self.file_name:
             self.file_name = 'new.mp4'
 
@@ -34,17 +42,26 @@ class DownLoad_M3U8(object):
         self.ts_list = []
         for tmp in ts_content:
             # print(tmp)
-            if tmp.find(".m3u8") != -1 :
-                pos = tmp.rfind('/') + 1
-                self.m3u8_url = self.m3u8_url_prefix + tmp
-                self.m3u8_url_prefix = self.m3u8_url_prefix + tmp[:pos]
-                print("update prefix = ", self.m3u8_url_prefix, "\n url = ", self.m3u8_url)
+            if tmp.find('.m3u8') != -1 :
+                if tmp[0] == '/' :
+                    tmp = tmp[1:]
+                    self.m3u8_url = self.m3u8_root + tmp
+                    self.m3u8_url_prefix = self.m3u8_root
+                else :
+                    pos = tmp.rfind('/') + 1
+                    self.m3u8_url = self.m3u8_url_prefix + tmp
+                    self.m3u8_url_prefix = self.m3u8_url_prefix + tmp[:pos]
+                print("update url = ", self.m3u8_url, "prefix = ",self.m3u8_url_prefix)
                 self.get_ts_url()
+
             if tmp.find(".ts") != -1 :
-                if tmp.find("https://") != -1 or tmp.find("http://") != -1:
+                if tmp.find('https://') != -1 or tmp.find('http://') != -1:
                     self.ts_list.append(tmp)
                     self.m3u8_url_prefix = ''
                 else :
+                    if tmp[0] == '/' :
+                        tmp = tmp[1:]
+                        self.m3u8_url_prefix = self.m3u8_root
                     self.ts_list.append(tmp)
 
         print(len(self.ts_list))
@@ -69,12 +86,6 @@ class DownLoad_M3U8(object):
                 print(url," : timeout retry")
                 i += 1
 
-    # def download_single_ts(self,ts_url):
-    #     url = self.m3u8_url_prefix + ts_url
-    #     res = requests.get(url,headers = self.headers,timeout=30)
-    #     with open(ts_url,'wb') as fp:
-    #        fp.write(res.content)
-    
  
     def download_all_ts(self):
         self.get_ts_url()
@@ -98,8 +109,8 @@ class DownLoad_M3U8(object):
  
 if __name__ == '__main__':
     
-    m3u8_url  = 'https://xxx.m3u8'
-    file_name = 'xxx' + '.mp4'
+    m3u8_url  = 'https://xxx/index.m3u8'
+    file_name = '视频' + '.mp4'
  
     start = time.time()
  
